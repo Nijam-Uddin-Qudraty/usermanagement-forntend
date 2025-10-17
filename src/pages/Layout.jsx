@@ -6,12 +6,12 @@ import Navbar from "./Navbar";
 export default function Layout() {
   return (
     <div className="app-container">
-      {/* Navbar at the top */}
+      
       <Navbar />
 
-      {/* Main content area */}
+      
       <main className="content p-4">
-        <Outlet /> {/* This renders the current route component */}
+        <Outlet />
       </main>
 
       {/* Optional footer */}
