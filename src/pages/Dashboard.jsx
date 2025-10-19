@@ -320,7 +320,6 @@
 // };
 
 // export default Dashboard;
-
 import React, { useEffect, useState, useCallback } from "react";
 import axios from "axios";
 import DataTable from "react-data-table-component";
@@ -334,8 +333,6 @@ const Dashboard = () => {
   const [perPage, setPerPage] = useState(10);
   const [totalRows, setTotalRows] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [sortColumn, setSortColumn] = useState(null);
-  const [sortDirection, setSortDirection] = useState('asc');
   const [totalUsers, setTotalUsers] = useState(0);
   const [totalActive, setTotalActive] = useState(0);
   const [totalStaff, setTotalStaff] = useState(0);
@@ -350,42 +347,36 @@ const Dashboard = () => {
 
   const token = localStorage.getItem("token");
 
-  // Define columns for the data table
+  // Define columns for the data table - REMOVED SORTABLE PROPERTY
   const columns = [
     {
       name: 'ID',
       selector: row => row.id,
-      sortable: true,
       width: '80px',
     },
     {
       name: 'Username',
       selector: row => row.username,
-      sortable: true,
       minWidth: '150px',
     },
     {
       name: 'Email',
       selector: row => row.email,
-      sortable: true,
       minWidth: '200px',
     },
     {
       name: 'First Name',
       selector: row => row.first_name || '-',
-      sortable: true,
       minWidth: '150px',
     },
     {
       name: 'Last Name',
       selector: row => row.last_name || '-',
-      sortable: true,
       minWidth: '150px',
     },
     {
       name: 'Active',
       selector: row => row.is_active,
-      sortable: true,
       center: true,
       width: '100px',
       cell: row => (
@@ -397,7 +388,6 @@ const Dashboard = () => {
     {
       name: 'Staff',
       selector: row => row.is_staff,
-      sortable: true,
       center: true,
       width: '100px',
       cell: row => (
@@ -409,7 +399,6 @@ const Dashboard = () => {
     {
       name: 'Last Login',
       selector: row => row.last_login,
-      sortable: true,
       width: '150px',
       cell: row => (
         <span>
@@ -420,7 +409,6 @@ const Dashboard = () => {
     {
       name: 'Date Joined',
       selector: row => row.date_joined,
-      sortable: true,
       width: '150px',
       cell: row => (
         <span>
@@ -455,16 +443,10 @@ const Dashboard = () => {
     },
   ];
 
-  const buildQueryString = useCallback((page, limit, sortField, sortOrder, filterParams) => {
+  const buildQueryString = useCallback((page, limit, filterParams) => {
     let queryParams = [`page=${page}`, `page_size=${limit}`];
     
-    // Add sorting parameters if provided
-    if (sortField && sortOrder) {
-      const ordering = sortOrder === 'desc' ? `-${sortField}` : sortField;
-      queryParams.push(`ordering=${ordering}`);
-    }
-    
-    // Add filter parameters
+    // Add filter parameters - FIXED: using 'search' parameter for username globally
     if (filterParams.username) {
       queryParams.push(`search=${encodeURIComponent(filterParams.username)}`);
     }
@@ -481,10 +463,10 @@ const Dashboard = () => {
     return queryParams.join('&');
   }, []);
 
-  const fetchUsers = useCallback(async (page = 1, limit = perPage, sortField = null, sortOrder = 'asc', filterParams = filters) => {
+  const fetchUsers = useCallback(async (page = 1, limit = perPage, filterParams = filters) => {
     setLoading(true);
     try {
-      const queryString = buildQueryString(page, limit, sortField, sortOrder, filterParams);
+      const queryString = buildQueryString(page, limit, filterParams);
       const url = `http://127.0.0.1:8000/dashboard/users/?${queryString}`;
 
       const res = await axios.get(url, {
@@ -527,15 +509,7 @@ const Dashboard = () => {
   const handlePerRowsChange = async (newPerPage, page) => {
     setPerPage(newPerPage);
     setCurrentPage(1);
-    await fetchUsers(1, newPerPage, sortColumn, sortDirection);
-  };
-
-  const handleSort = async (column, sortDirection) => {
-    const sortField = column.selector || column.name?.toLowerCase();
-    setSortColumn(sortField);
-    setSortDirection(sortDirection);
-    setCurrentPage(1);
-    await fetchUsers(1, perPage, sortField, sortDirection);
+    await fetchUsers(1, newPerPage);
   };
 
   const handleFilterChange = (field, value) => {
@@ -547,7 +521,7 @@ const Dashboard = () => {
 
   const applyFilters = () => {
     setCurrentPage(1);
-    fetchUsers(1, perPage, sortColumn, sortDirection, filters);
+    fetchUsers(1, perPage, filters);
   };
 
   const resetFilters = () => {
@@ -559,7 +533,7 @@ const Dashboard = () => {
     };
     setFilters(resetFilters);
     setCurrentPage(1);
-    fetchUsers(1, perPage, sortColumn, sortDirection, resetFilters);
+    fetchUsers(1, perPage, resetFilters);
   };
 
   const handleView = (user) => {
@@ -579,7 +553,7 @@ const Dashboard = () => {
         { headers: { Authorization: `Token ${token}` } }
       );
       
-      await fetchUsers(currentPage, perPage, sortColumn, sortDirection);
+      await fetchUsers(currentPage, perPage);
       setShowDeleteModal(false);
     } catch (err) {
       console.error("Error deleting user", err);
@@ -595,7 +569,7 @@ const Dashboard = () => {
         { headers: { Authorization: `Token ${token}` } }
       );
       setShowViewModal(false);
-      await fetchUsers(currentPage, perPage, sortColumn, sortDirection);
+      await fetchUsers(currentPage, perPage);
     } catch (err) {
       console.error("Error updating user", err);
     }
@@ -625,6 +599,9 @@ const Dashboard = () => {
         fontSize: '14px',
         padding: '12px 15px',
         backgroundColor: '#f8f9fa',
+        '&:hover': {
+          cursor: 'default',
+        },
       },
     },
     cells: {
@@ -843,8 +820,6 @@ const Dashboard = () => {
                   paginationTotalRows={totalRows}
                   onChangePage={handlePageChange}
                   onChangeRowsPerPage={handlePerRowsChange}
-                  onSort={handleSort}
-                  sortServer
                   paginationDefaultPage={currentPage}
                   paginationRowsPerPageOptions={[10, 25, 50, 100]}
                   paginationComponentOptions={paginationComponentOptions}
